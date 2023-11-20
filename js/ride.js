@@ -3,6 +3,7 @@
 var WildRydes = window.WildRydes || {};
 WildRydes.map = WildRydes.map || {};
 let map;
+const openWeatherMapApiKey = '3e778fc618dda54ccdc4c96af677ddd5'; // Replace with your actual API key
 
 (function rideScopeWrapper($) {
     var authToken;
@@ -42,8 +43,8 @@ let map;
         });
     }
 
-    //  completeRequest
-    //      a Unicorn has been dispatched to your location
+    // completeRequest
+    //  a Unicorn has been dispatched to your location
     function completeRequest(result, pickupLocation) {
         var unicorn;
         var pronoun;
@@ -54,8 +55,19 @@ let map;
         displayUpdate(unicorn.Name + ', your ' + unicorn.Color + ' unicorn, is on ' + pronoun + ' way.', unicorn.Color);
 
         console.log(pickupLocation);
-        //  get the local weather, find nearby restaurants, movies
-        // getWeather(pickupLocation, unicorn)
+
+        // Create LatLng objects for current location and pickup location
+        var currentLatLng = L.latLng(WildRydes.map.center.latitude, WildRydes.map.center.longitude);
+        var pickupLatLng = L.latLng(pickupLocation.latitude, pickupLocation.longitude);
+
+        // Calculate distance between pickupLocation and current location
+        var distance = currentLatLng.distanceTo(pickupLatLng);
+
+        // Display information to the user
+        displayUpdate(`Pickup is approximately ${(distance * 0.000621371).toFixed(2)} miles away`);
+
+        // Call getWeather to display the current weather
+        getWeather(pickupLocation);
 
         animateArrival(function animateCallback() {
             displayUpdate(unicorn.Name + ' has arrived. Giddy up!', unicorn.Color);
@@ -65,6 +77,7 @@ let map;
             $('#request').text('Set Pickup');
         });
     }
+
 
     // Register click handler for #request button
     $(function onDocReady() {
@@ -179,3 +192,24 @@ function displayUpdate(text, color='green') {
     $('#updates').prepend($(`<li style="background-color:${color}">${text}</li>`));
 }
 
+function getWeather(location) {
+    const weatherApiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${location.latitude}&lon=${location.longitude}&appid=${openWeatherMapApiKey}&units=metric`;
+
+    $.ajax({
+        method: 'GET',
+        url: weatherApiUrl,
+        success: function (weatherData) {
+            // Extract relevant weather information from the response
+            const temperature = (weatherData.main.temp * 9 / 5) + 32;
+            const description = weatherData.weather[0].description;
+
+            // Display the weather information to the user
+            displayUpdate(`Current weather: ${temperature}°F, ${description}`);
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.error('Error getting weather: ', textStatus, ', Details: ', errorThrown);
+            console.error('Response: ', jqXHR.responseText);
+            alert('An error occurred when getting weather information:\n' + jqXHR.responseText);
+        }
+    });
+}
